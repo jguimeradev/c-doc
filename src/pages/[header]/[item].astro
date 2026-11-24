@@ -1,0 +1,70 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import { Code } from 'astro:components';
+import DocLayout from '../../layouts/DocLayout.astro';
+import { headerBySlug } from '../../data/headers';
+import { groupByKind, headersSection, itemUrl, kindLabel, url } from '../../data/nav';
+
+export async function getStaticPaths() {
+  const items = await getCollection('items');
+  return items.map((entry) => ({
+    params: { header: entry.data.header, item: `${entry.data.kind}.${entry.data.name}` },
+    props: { entry, siblings: items.filter((i) => i.data.header === entry.data.header) },
+  }));
+}
+
+const { entry, siblings } = Astro.props as {
+  entry: CollectionEntry<'items'>;
+  siblings: CollectionEntry<'items'>[];
+};
+const { Content } = await render(entry);
+const d = entry.data;
+const h = headerBySlug[d.header];
+const groups = groupByKind(siblings);
+---
+
+<DocLayout
+  title={`${d.name} in ${h.file} - C`}
+  location={d.name}
+  locationHref={itemUrl(entry)}
+  sections={[
+    ...groups.map((g) => ({
+      title: kindLabel[g.kind].many,
+      href: url(`${h.slug}/#${g.kind}s`),
+      links: g.items.map((i) => ({
+        label: i.data.name,
+        href: itemUrl(i),
+        kind: i.data.kind,
+        current: i.id === entry.id,
+      })),
+    })),
+    headersSection(),
+  ]}
+>
+  <div class="main-heading">
+    <h1>
+      {kindLabel[d.kind].one}{' '}
+      <a href={url('')}>libc</a>::<a class="mod" href={url(`${h.slug}/`)}>{h.file}</a>::<span class={d.kind}>{d.name}</span>
+    </h1>
+    <span class="out-of-band">{d.source && <a href={d.source}>source</a>}</span>
+  </div>
+
+  <div class="item-decl">
+    <Code
+      code={`#include <${h.file}>\n\n${d.signature}`}
+      lang="c"
+      themes={{ light: 'github-light', dark: 'github-dark' }}
+      defaultColor={false}
+    />
+  </div>
+
+  <div>
+    <span class="stab" title="Standard">{d.standard}</span>
+    {d.safety && <span class="stab" title="POSIX safety concepts (glibc manual)">{d.safety}</span>}
+  </div>
+
+  <details class="toggle" open>
+    <summary>Expand description</summary>
+    <div class="docblock"><Content /></div>
+  </details>
+</DocLayout>

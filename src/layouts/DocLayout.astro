@@ -1,0 +1,212 @@
+---
+import '../styles/rustdoc.css';
+
+export interface SidebarSection {
+  title: string;
+  href?: string;
+  links: { label: string; href: string; kind?: string; current?: boolean }[];
+}
+
+interface Props {
+  title: string;
+  location: string;
+  locationHref: string;
+  sections: SidebarSection[];
+  /** Full-width page without the sidebar (used by the playground). */
+  wide?: boolean;
+}
+
+const { title, location, locationHref, sections, wide = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const allSections: SidebarSection[] = [
+  { title: 'Tools', links: [{ label: '▶ C Playground', href: `${base}/playground/`, kind: 'project' }] },
+  ...sections,
+];
+
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <link rel="icon" href={`${base}/favicon.svg`} type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500&family=Inter:wght@400;500;600&family=Source+Code+Pro:wght@400;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap"
+    />
+    <script is:inline>
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem('cdoc-theme'); } catch (e) {}
+        if (!t) t = 'mdn';
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
+  </head>
+  <body class:list={[{ wide }]}>
+    <div class="mobile-topbar">
+      <button id="sidebar-toggle" aria-label="Toggle sidebar">☰</button>
+      <a class="location" href={locationHref}>{location}</a>
+    </div>
+
+    <nav class="sidebar" aria-label="Sidebar">
+      <div class="logo-container">
+        <a href={`${base}/`} aria-label="C documentation home"><div class="logo">C</div></a>
+      </div>
+      <h2 class="location"><a href={locationHref}>{location}</a></h2>
+      <p class="version">ISO C · glibc manual</p>
+      {
+        allSections.map((s) => (
+          <section>
+            <h3>{s.href ? <a href={s.href}>{s.title}</a> : s.title}</h3>
+            <ul>
+              {s.links.map((l) => (
+                <li>
+                  <a href={l.href} class:list={[l.kind, { current: l.current }]}>
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      }
+    </nav>
+
+    <div class="main-wrap">
+      <div class="search-bar">
+        <input
+          id="search-input"
+          class="search-input"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Click or press ‘S’ to search…"
+          aria-label="Search the documentation"
+        />
+        <select id="theme-picker" class="theme-picker" aria-label="Theme">
+          <option value="mdn">mdn dark</option>
+          <option value="light">light</option>
+          <option value="dark">rust dark</option>
+          <option value="ayu">ayu</option>
+        </select>
+      </div>
+
+      <main>
+        <section id="main-content">
+          <slot />
+        </section>
+        <section id="search" aria-live="polite">
+          <div class="main-heading"><h1>Results</h1></div>
+          <div class="search-results" id="search-results"></div>
+        </section>
+        <footer class="attribution">
+          Library reference adapted from the <a href="https://sourceware.org/glibc/manual/latest/html_node/">GNU C Library manual</a>,
+          retrieved via Context7. The book follows the chapter structure of Kernighan &amp; Ritchie's
+          <em>The C Programming Language</em>; its text and examples are original. Styled after rustdoc.
+        </footer>
+      </main>
+    </div>
+
+    <script is:inline define:vars={{ indexUrl: `${base}/search-index.json` }}>
+      window.__CDOC_INDEX_URL__ = indexUrl;
+    </script>
+    {!wide && <script>import '../playground/tryit.ts';</script>}
+    <script>
+      type Entry = { n: string; k: string; h: string; d: string; u: string };
+      let index: Entry[] = [];
+      let loading: Promise<void> | null = null;
+      const loadIndex = () =>
+        (loading ??= fetch((window as any).__CDOC_INDEX_URL__)
+          .then((r) => r.json())
+          .then((data: Entry[]) => {
+            index = data;
+          })
+          .catch(() => {
+            loading = null;
+          }));
+      const input = document.getElementById('search-input') as HTMLInputElement;
+      const results = document.getElementById('search-results')!;
+      const picker = document.getElementById('theme-picker') as HTMLSelectElement;
+      let selected = 0;
+
+      picker.value = document.documentElement.dataset.theme ?? 'mdn';
+      picker.addEventListener('change', () => {
+        document.documentElement.dataset.theme = picker.value;
+        try { localStorage.setItem('cdoc-theme', picker.value); } catch {}
+      });
+
+      document.getElementById('sidebar-toggle')?.addEventListener('click', () =>
+        document.body.classList.toggle('sidebar-open'),
+      );
+
+      const esc = (s: string) =>
+        s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+      function score(e: Entry, q: string): number {
+        const n = e.n.toLowerCase();
+        if (n === q) return 0;
+        if (n.startsWith(q)) return 1;
+        if (n.includes(q)) return 2;
+        if (e.d.toLowerCase().includes(q)) return 3;
+        return -1;
+      }
+
+      function render() {
+        const q = input.value.trim().toLowerCase();
+        document.body.classList.toggle('searching', q.length > 0);
+        if (!q) return;
+        const hits = index
+          .map((e) => ({ e, s: score(e, q) }))
+          .filter((x) => x.s >= 0)
+          .sort((a, b) => a.s - b.s || a.e.n.localeCompare(b.e.n));
+        selected = 0;
+        results.innerHTML = hits.length
+          ? hits
+              .map(
+                ({ e }, i) =>
+                  `<a href="${e.u}" class="${i === 0 ? 'selected' : ''}"><span class="path">${
+                    e.h ? `<span class="hdr">${['book', 'exercises', 'projects'].includes(e.h) ? e.h : e.h + '.h'}::</span>` : ''
+                  }<span class="${e.k}">${esc(e.n)}</span></span><span>${esc(e.d)}</span></a>`,
+              )
+              .join('')
+          : `<p class="empty">No results for “${esc(input.value)}”.</p>`;
+      }
+
+      input.addEventListener('focus', loadIndex);
+      input.addEventListener('input', () => {
+        if (index.length) render();
+        else loadIndex()?.then(render);
+      });
+      input.addEventListener('keydown', (ev) => {
+        const links = results.querySelectorAll('a');
+        if (ev.key === 'Escape') {
+          input.value = '';
+          render();
+          input.blur();
+        } else if ((ev.key === 'ArrowDown' || ev.key === 'ArrowUp') && links.length) {
+          ev.preventDefault();
+          links[selected]?.classList.remove('selected');
+          selected = (selected + (ev.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
+          links[selected].classList.add('selected');
+          links[selected].scrollIntoView({ block: 'nearest' });
+        } else if (ev.key === 'Enter' && links[selected]) {
+          location.href = links[selected].href;
+        }
+      });
+
+      document.addEventListener('keydown', (ev) => {
+        const t = ev.target as HTMLElement;
+        if (t.matches('input, textarea, select')) return;
+        if (ev.key === 's' || ev.key === 'S' || ev.key === '/') {
+          ev.preventDefault();
+          input.focus();
+        }
+      });
+    </script>
+  </body>
+</html>

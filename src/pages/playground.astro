@@ -1,0 +1,113 @@
+---
+import DocLayout from '../layouts/DocLayout.astro';
+import '../styles/playground.css';
+---
+
+<DocLayout title="Playground - C" location="Playground" locationHref="/playground/" sections={[]} wide>
+  <div class="pg" id="pg">
+    <div class="pg-head">
+      <h1>C <span class="mod">Playground</span></h1>
+      <p class="pg-lede">
+        Write C, then compile, run and debug it in your browser. Every line maps to x86-64 assembly, and you can watch
+        the stack, heap and registers of a simulated Linux process change as it runs.
+      </p>
+    </div>
+
+    <div class="pg-toolbar" role="toolbar" aria-label="Playground controls">
+      <div class="pg-group">
+        <select id="pg-examples" aria-label="Load an example"></select>
+      </div>
+      <div class="pg-group">
+        <button id="pg-run" class="pg-btn primary" title="Compile and run (Ctrl+Enter)">▶ Run</button>
+        <button id="pg-debug" class="pg-btn" title="Start debugging at main (F5)">⏵ Debug</button>
+      </div>
+      <div class="pg-group pg-dbg" id="pg-dbg" aria-label="Debugger controls">
+        <button id="pg-continue" class="pg-btn" title="Continue to the next breakpoint (F8)">Continue</button>
+        <button id="pg-over" class="pg-btn" title="Step over: next line, without entering calls (F10)">Step over</button>
+        <button id="pg-into" class="pg-btn" title="Step into: next line, entering calls (F11)">Step into</button>
+        <button id="pg-stepout" class="pg-btn" title="Step out: run until the current function returns (Shift+F11)">Step out</button>
+        <button id="pg-instr" class="pg-btn" title="Execute exactly one machine instruction (F9)">Step instruction</button>
+        <button id="pg-stop" class="pg-btn danger" title="Stop (Shift+F5)">■ Stop</button>
+      </div>
+      <div class="pg-group pg-right">
+        <label class="pg-check" title="AddressSanitizer-style checks for heap errors and leaks"><input type="checkbox" id="pg-asan" checked /> Sanitizer</label>
+        <button id="pg-share" class="pg-btn" title="Copy a link containing this code">Share</button>
+        <a id="pg-godbolt" class="pg-btn" target="_blank" rel="noopener" title="Open this code in Compiler Explorer with real GCC 14.2">Real GCC ↗</a>
+      </div>
+    </div>
+
+    <div class="pg-status" id="pg-status" role="status" aria-live="polite">Loading…</div>
+
+    <div class="pg-main">
+      <section class="pg-pane pg-editor-pane">
+        <header><span>main.c</span><span class="pg-sub">click the gutter to set breakpoints</span></header>
+        <div id="pg-editor" class="pg-editor"></div>
+      </section>
+
+      <section class="pg-pane pg-asm-pane">
+        <header>
+          <span>Assembly</span>
+          <span class="pg-sub">x86-64 · Intel syntax · GCC -O0 style</span>
+          <label class="pg-check small"><input type="checkbox" id="pg-addrs" checked /> addresses</label>
+        </header>
+        <div id="pg-asm" class="pg-asm" tabindex="0" aria-label="Generated assembly"></div>
+      </section>
+
+      <section class="pg-pane pg-inspect-pane">
+        <nav class="pg-tabs" role="tablist">
+          <button role="tab" data-tab="vars" class="active">Variables</button>
+          <button role="tab" data-tab="stack">Stack</button>
+          <button role="tab" data-tab="memory">Memory</button>
+          <button role="tab" data-tab="heap">Heap</button>
+          <button role="tab" data-tab="regs">Registers</button>
+        </nav>
+        <div id="pg-inspect" class="pg-inspect" role="tabpanel"></div>
+      </section>
+    </div>
+
+    <div class="pg-bottom">
+      <section class="pg-pane pg-out-pane">
+        <header><span>Output</span><span id="pg-exit" class="pg-sub"></span></header>
+        <div id="pg-fault" class="pg-fault" hidden></div>
+        <pre id="pg-out" class="pg-out"></pre>
+      </section>
+      <section class="pg-pane pg-stdin-pane">
+        <header><span>stdin</span><span class="pg-sub">read by scanf / getchar</span></header>
+        <textarea id="pg-stdin" spellcheck="false" aria-label="Standard input"></textarea>
+      </section>
+    </div>
+
+    <details class="pg-about">
+      <summary>How this works, and what it can't do</summary>
+      <div class="docblock book-text">
+        <p>
+          Everything runs in your browser. Your code is compiled by a small C compiler written for this site into x86-64
+          assembly in the style of <code>gcc -O0 -masm=intel</code>, using the real System V calling convention
+          (arguments in <code>rdi</code>, <code>rsi</code>, … and <code>rbp</code>-based stack frames). A simulated CPU
+          then executes it inside a simulated Linux process with realistic addresses: code at <code>0x401000</code>,
+          string literals in <code>.rodata</code>, globals in <code>.data</code> and <code>.bss</code>, a
+          <code>malloc</code> heap above them, and the stack just below <code>0x7ffffffff000</code>.
+        </p>
+        <p><strong>Supported:</strong> <code>char</code>, <code>short</code>, <code>int</code>, <code>long</code> (signed
+          and unsigned), pointers, arrays (including multi-dimensional), structs, <code>typedef</code>, <code>enum</code>,
+          globals and <code>static</code> locals, all operators, <code>if</code>/<code>switch</code>/loops, recursion,
+          object-like <code>#define</code>, and a libc subset: <code>printf</code> family, <code>puts</code>,
+          <code>putchar</code>, <code>getchar</code>, <code>scanf</code>, <code>malloc</code>/<code>calloc</code>/<code>realloc</code>/<code>free</code>,
+          the <code>&lt;string.h&gt;</code> and <code>&lt;ctype.h&gt;</code> basics, <code>atoi</code>, <code>strtol</code>,
+          <code>rand</code>, <code>exit</code> and <code>assert</code>.</p>
+        <p><strong>Not supported:</strong> floating point, function pointers, unions, varargs in your own functions,
+          function-like macros, <code>goto</code>, passing or returning structs by value, files and system calls.</p>
+        <p>
+          The assembly is GCC-<em>style</em>, not byte-for-byte what GCC produces, and instruction sizes are approximate.
+          Use <strong>Real GCC ↗</strong> to see the genuine output of GCC 14.2 on Compiler Explorer. The Sanitizer option
+          imitates AddressSanitizer for heap errors and leaks; like real C, out-of-bounds writes on the
+          <em>stack</em> are not caught until they corrupt something.
+        </p>
+      </div>
+    </details>
+  </div>
+</DocLayout>
+
+<script>
+  import '../playground/ui.ts';
+</script>

@@ -1,0 +1,69 @@
+---
+import { render, type CollectionEntry } from 'astro:content';
+import DocLayout from '../../layouts/DocLayout.astro';
+import { chapterLabel, chapterUrl, getBook, getProjects, projectUrl, projectsSection, url } from '../../data/nav';
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((p, i) => ({
+    params: { project: p.id },
+    props: { project: p, prev: projects[i - 1], next: projects[i + 1] },
+  }));
+}
+
+const { project, prev, next } = Astro.props as {
+  project: CollectionEntry<'projects'>;
+  prev?: CollectionEntry<'projects'>;
+  next?: CollectionEntry<'projects'>;
+};
+const { Content, headings } = await render(project);
+const d = project.data;
+const book = await getBook();
+const chapters = d.chapters.map((id) => {
+  const c = book.find((b) => b.id === id);
+  if (!c) throw new Error(`project ${project.id}: unknown chapter ${id}`);
+  return c;
+});
+const short = (p: CollectionEntry<'projects'>) => p.data.title.split(' — ')[0];
+---
+
+<DocLayout
+  title={`${d.title} - Projects`}
+  location={short(project)}
+  locationHref={projectUrl(project.id)}
+  sections={[
+    { title: 'Sections', links: headings.filter((h) => h.depth === 2).map((h) => ({ label: h.text, href: `#${h.slug}` })) },
+    await projectsSection(project.id),
+  ]}
+>
+  <div class="main-heading">
+    <h1>Project <a href={url('projects/')}>projects</a>::<span class="project">{short(project)}</span></h1>
+    <span class="out-of-band"><span class={`level level-${d.level}`}>{d.level}</span></span>
+  </div>
+
+  <p class="project-lede">{d.summary}</p>
+
+  <div class="project-meta">
+    <div>
+      <span class="chips-label">Chapters</span>
+      {chapters.map((c) => <a class="chip" href={chapterUrl(c.id)}>{chapterLabel(c)}</a>)}
+    </div>
+    <div>
+      <span class="chips-label">Skills</span>
+      {d.skills.map((s) => <span class="chip">{s}</span>)}
+    </div>
+    <div>
+      <span class="chips-label">Platform</span>
+      <span class="chip">{d.platform}</span>
+    </div>
+  </div>
+
+  <div class="docblock book-text">
+    <Content />
+  </div>
+
+  <nav class="chapter-nav" aria-label="Project navigation">
+    {prev ? <a class="prev" href={projectUrl(prev.id)}>← {short(prev)}</a> : <span />}
+    {next ? <a class="next" href={projectUrl(next.id)}>{short(next)} →</a> : <span />}
+  </nav>
+</DocLayout>

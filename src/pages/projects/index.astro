@@ -1,0 +1,51 @@
+---
+import DocLayout from '../../layouts/DocLayout.astro';
+import { bookSection, getBook, getProjects, projectUrl, projectsSection, chapterUrl, url } from '../../data/nav';
+
+const projects = await getProjects();
+const book = await getBook();
+const chapterName = (id: string) => book.find((c) => c.id === id)?.data.number ?? id;
+---
+
+<DocLayout
+  title="Projects - The C Book"
+  location="Projects"
+  locationHref={url('projects/')}
+  sections={[await projectsSection(), await bookSection()]}
+>
+  <div class="main-heading">
+    <h1>Book <a href={url('book/')}>book</a>::<span class="project">Projects</span></h1>
+    <span class="out-of-band">{projects.length} projects</span>
+  </div>
+
+  <div class="docblock book-text">
+    <p>
+      Exercises practice one idea at a time; projects make you combine them. Each project describes a real tool to
+      build, broken into milestones you can finish and test one by one, with starter code that compiles, a testing
+      plan, and stretch goals. They're ordered roughly by difficulty, and each lists the chapters it draws on.
+    </p>
+    <p>
+      There are no full solutions on purpose. If you get stuck, reread the linked chapters, shrink the problem until it
+      works, and add one thing at a time. Compile with <code>-Wall -Wextra -g -fsanitize=address,undefined</code>{" "}
+      throughout.
+    </p>
+  </div>
+
+  <div class="project-grid">
+    {
+      projects.map((p) => (
+        <a class="project-card" href={projectUrl(p.id)}>
+          <div class="project-card-head">
+            <span class="project">{p.data.title.split(' — ')[0]}</span>
+            <span class={`level level-${p.data.level}`}>{p.data.level}</span>
+          </div>
+          <p>{p.data.summary}</p>
+          <div class="chips">
+            <span class="chips-label">Chapters</span>
+            {p.data.chapters.map((c) => <span class="chip">{chapterName(c)}</span>)}
+          </div>
+        </a>
+      ))
+    }
+  </div>
+</DocLayout>

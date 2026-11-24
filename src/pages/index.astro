@@ -1,0 +1,112 @@
+---
+import { getCollection } from 'astro:content';
+import { Code } from 'astro:components';
+import DocLayout from '../layouts/DocLayout.astro';
+import { headers } from '../data/headers';
+import { bookSection, chapterLabel, chapterUrl, getBook, getProjects, headersSection, projectUrl, projectsSection, url } from '../data/nav';
+
+const book = await getBook();
+const projects = await getProjects();
+
+const items = await getCollection('items');
+const count = (slug: string) => items.filter((i) => i.data.header === slug).length;
+
+const example = `#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main(void)
+{
+    const char *greeting = "hello, world";
+    char *copy = malloc(strlen(greeting) + 1);
+    if (copy == NULL) {
+        perror("malloc");
+        return EXIT_FAILURE;
+    }
+    memcpy(copy, greeting, strlen(greeting) + 1);
+    printf("%s (%zu bytes)\\n", copy, strlen(copy));
+    free(copy);
+    return EXIT_SUCCESS;
+}`;
+---
+
+<DocLayout title="libc - C" location="libc" locationHref={url('')} sections={[await bookSection(), await projectsSection(), headersSection()]}>
+  <div class="main-heading">
+    <h1>Library <span class="mod">libc</span></h1>
+    <span class="out-of-band"><a href="https://sourceware.org/glibc/manual/latest/html_node/">source</a></span>
+  </div>
+
+  <details class="toggle" open>
+    <summary>Expand description</summary>
+    <div class="docblock">
+      <p>
+        <strong>The C Standard Library</strong>
+      </p>
+      <p>
+        The C standard library is the set of headers and functions every hosted C implementation provides. It offers
+        I/O streams, dynamic memory, string and memory primitives, and error reporting. This reference covers the most
+        commonly used parts, with notes on GNU C Library (glibc) behavior where it differs from portable ISO C.
+      </p>
+      <h2>How to read this documentation</h2>
+      <p>
+        There are two parts. <a href={url('book/')}><strong>The C Book</strong></a> teaches the language, with its
+        chapters arranged like Kernighan &amp; Ritchie's <em>The C Programming Language</em>. The{' '}
+        <strong>API reference</strong> below documents every header of the standard library like a module: each
+        function, macro and type has a page with its declaration, behavior, edge cases and examples.
+        Every chapter has exercises with hints and solutions, and the <a href={url('projects/')}>projects</a> combine several chapters into real tools. Press <code>S</code> anywhere to search.
+      </p>
+      <Code code={example} lang="c" themes={{ light: 'github-light', dark: 'github-dark' }} defaultColor={false} />
+    </div>
+  </details>
+
+  <a class="exercise-callout" href={url('playground/')}>
+    <strong>▶ Try the C Playground</strong>
+    <span>Write C and run it right here. Step through it line by line, see the x86-64 assembly for every line, and watch the stack, heap and registers of a simulated Linux process. Every runnable example on this site has a <em>Try it</em> button.</span>
+  </a>
+
+  <h2 class="section-header">The C Book</h2>
+  <div class="item-table">
+    {
+      book.map((c) => (
+        <>
+          <div class="item-name">
+            <a class="book" href={chapterUrl(c.id)}>{chapterLabel(c)}</a>
+          </div>
+          <div class="desc">{c.data.summary}</div>
+        </>
+      ))
+    }
+  </div>
+
+  <h2 class="section-header">Projects</h2>
+  <div class="item-table">
+    {
+      projects.map((p) => (
+        <>
+          <div class="item-name">
+            <a class="project" href={projectUrl(p.id)}>{p.data.title.split(' — ')[0]}</a>
+          </div>
+          <div class="desc">
+            {p.data.summary} <span class={`level level-${p.data.level}`}>{p.data.level}</span>
+          </div>
+        </>
+      ))
+    }
+  </div>
+
+  <h2 class="section-header">Headers</h2>
+  <div class="item-table">
+    {
+      headers.map((h) => (
+        <>
+          <div class="item-name">
+            <a class="mod" href={url(`${h.slug}/`)}>{h.file}</a>
+          </div>
+          <div class="desc">
+            {h.summary} <span style="opacity:.6">({count(h.slug)} items)</span>
+          </div>
+        </>
+      ))
+    }
+  </div>
+</DocLayout>

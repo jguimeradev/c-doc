@@ -1,0 +1,64 @@
+---
+import { render, type CollectionEntry } from 'astro:content';
+import DocLayout from '../../layouts/DocLayout.astro';
+import { bookSection, chapterLabel, chapterUrl, exercisesUrl, getBook, getExercises, projectsSection, url } from '../../data/nav';
+
+export async function getStaticPaths() {
+  const book = await getBook();
+  return book.map((c, i) => ({
+    params: { chapter: c.id },
+    props: { chapter: c, prev: book[i - 1], next: book[i + 1] },
+  }));
+}
+
+const { chapter, prev, next } = Astro.props as {
+  chapter: CollectionEntry<'book'>;
+  prev?: CollectionEntry<'book'>;
+  next?: CollectionEntry<'book'>;
+};
+const { Content, headings } = await render(chapter);
+const d = chapter.data;
+const kind = /^[A-Z]$/.test(d.number) ? 'Appendix' : d.number === '0' ? '' : 'Chapter';
+const sections = headings.filter((h) => h.depth === 2);
+const exercises = (await getExercises())[chapter.id];
+const exerciseCount = exercises ? (await render(exercises)).headings.filter((h) => h.depth === 2).length : 0;
+---
+
+<DocLayout
+  title={`${d.title} - The C Book`}
+  location={chapterLabel(chapter)}
+  locationHref={chapterUrl(chapter.id)}
+  sections={[
+    { title: 'Sections', links: sections.map((h) => ({ label: h.text, href: `#${h.slug}` })) },
+    ...(exercises
+      ? [{ title: 'Practice', links: [{ label: `Exercises (${exerciseCount})`, href: exercisesUrl(chapter.id), kind: 'project' }] }]
+      : []),
+    await bookSection(chapter.id),
+    await projectsSection(),
+  ]}
+>
+  <div class="main-heading">
+    <h1>
+      {kind && <>{kind} {d.number}{' '}</>}<a href={url('book/')}>book</a>::<span class="book">{d.title}</span>
+    </h1>
+    <span class="out-of-band"><a href="#chapter-nav">next →</a></span>
+  </div>
+
+  <div class="docblock book-text">
+    <Content />
+  </div>
+
+  {
+    exercises && (
+      <a class="exercise-callout" href={exercisesUrl(chapter.id)}>
+        <strong>Exercises for this chapter →</strong>
+        <span>{exerciseCount} exercises with hints and solutions: {exercises.data.summary}</span>
+      </a>
+    )
+  }
+
+  <nav class="chapter-nav" id="chapter-nav" aria-label="Chapter navigation">
+    {prev ? <a class="prev" href={chapterUrl(prev.id)}>← {chapterLabel(prev)}</a> : <span />}
+    {next ? <a class="next" href={chapterUrl(next.id)}>{chapterLabel(next)} →</a> : <span />}
+  </nav>
+</DocLayout>

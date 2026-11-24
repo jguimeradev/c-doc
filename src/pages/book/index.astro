@@ -1,0 +1,51 @@
+---
+import DocLayout from '../../layouts/DocLayout.astro';
+import { bookSection, chapterLabel, chapterUrl, exercisesUrl, getBook, getExercises, headersSection, projectsSection, url } from '../../data/nav';
+
+const book = await getBook();
+const exercises = await getExercises();
+---
+
+<DocLayout
+  title="The C Book - C"
+  location="The C Book"
+  locationHref={url('book/')}
+  sections={[await bookSection(), await projectsSection(), headersSection()]}
+>
+  <div class="main-heading">
+    <h1>Book <span class="book">The C Programming Language</span></h1>
+    <span class="out-of-band">{book.length} chapters</span>
+  </div>
+
+  <div class="docblock">
+    <p>
+      A guided tour of C whose chapter structure follows Kernighan &amp; Ritchie's <em>The C Programming Language</em>
+      (2nd edition). The text and examples are original and updated for modern C (C99 through C23). Library functions
+      link to their pages in the API reference.
+    </p>
+  </div>
+
+  <h2 class="section-header">Contents</h2>
+  <div class="item-table">
+    {
+      book.map((c) => (
+        <>
+          <div class="item-name">
+            <a class="book" href={chapterUrl(c.id)}>{chapterLabel(c)}</a>
+          </div>
+          <div class="desc">
+            {c.data.summary}
+            {exercises[c.id] && <> · <a href={exercisesUrl(c.id)}>exercises</a></>}
+          </div>
+        </>
+      ))
+    }
+  </div>
+  <h2 class="section-header">Projects</h2>
+  <div class="docblock">
+    <p>
+      Larger programs that combine several chapters, from a text-statistics tool to a shell and a compressor.
+      <a href={url('projects/')}>Browse the projects →</a>
+    </p>
+  </div>
+</DocLayout>

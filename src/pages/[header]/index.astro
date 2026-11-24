@@ -1,0 +1,59 @@
+---
+import { getCollection } from 'astro:content';
+import DocLayout from '../../layouts/DocLayout.astro';
+import { headers, type HeaderInfo } from '../../data/headers';
+import { bookSection, groupByKind, headersSection, itemUrl, kindLabel, url } from '../../data/nav';
+
+export function getStaticPaths() {
+  return headers.map((h) => ({ params: { header: h.slug }, props: { h } }));
+}
+
+const { h } = Astro.props as { h: HeaderInfo };
+const items = await getCollection('items', (i) => i.data.header === h.slug);
+const groups = groupByKind(items);
+---
+
+<DocLayout
+  title={`${h.file} - C`}
+  location={h.file}
+  locationHref={url(`${h.slug}/`)}
+  sections={[
+    ...groups.map((g) => ({
+      title: kindLabel[g.kind].many,
+      href: `#${g.kind}s`,
+      links: g.items.map((i) => ({ label: i.data.name, href: itemUrl(i), kind: i.data.kind })),
+    })),
+    headersSection(),
+    await bookSection(),
+  ]}
+>
+  <div class="main-heading">
+    <h1>Header{" "}<a href={url('')}>libc</a>::<span class="mod">{h.file}</span></h1>
+    <span class="out-of-band">
+      {h.appendix && <a href={url('book/standard-library/')}>Appendix {h.appendix}</a>}{h.appendix && ' · '}<code>#include &lt;{h.file}&gt;</code>
+    </span>
+  </div>
+
+  <details class="toggle" open>
+    <summary>Expand description</summary>
+    <div class="docblock"><p set:html={h.description} /></div>
+  </details>
+
+  {
+    groups.map((g) => (
+      <>
+        <h2 class="section-header" id={`${g.kind}s`}>{kindLabel[g.kind].many}</h2>
+        <div class="item-table">
+          {g.items.map((i) => (
+            <>
+              <div class="item-name">
+                <a class={i.data.kind} href={itemUrl(i)}>{i.data.name}</a>
+              </div>
+              <div class="desc">{i.data.summary}</div>
+            </>
+          ))}
+        </div>
+      </>
+    ))
+  }
+</DocLayout>
