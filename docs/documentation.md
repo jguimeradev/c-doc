@@ -7,7 +7,7 @@ A static documentation site for the C language, built with [Astro](https://astro
 | **API reference** | `/`, `/<header>/`, `/<header>/<kind>.<name>/` | One page per function, macro and type of the C standard library (213 entries across 14 headers) |
 | **The C Book** | `/book/` | 13 chapters whose structure follows Kernighan & Ritchie's *The C Programming Language*, written in original text |
 | **Exercises** | `/book/<chapter>/exercises/` | 49 exercises with difficulty, hints and solutions, one page per chapter (1–8) |
-| **Projects** | `/projects/` | 8 multi-chapter projects with specs, milestones, starter code and test plans |
+| **Projects** | `/projects/` | 9 multi-chapter projects with specs, milestones, starter code and test plans |
 | **Playground** | `/playground/` | An in-browser C compiler, x86-64 simulator and debugger |
 
 Everything is static: the build produces plain HTML/CSS/JS in `dist/` that any static host can serve. The playground runs entirely in the visitor's browser.
@@ -79,7 +79,7 @@ c-doc/
     │   ├── items/<header>/<name>.md     API reference entries (213)
     │   ├── book/NN-<slug>.md            book chapters (13)
     │   ├── exercises/<chapter-id>.md    exercises, one file per chapter (8)
-    │   └── projects/NN-<slug>.md        projects (8)
+    │   └── projects/NN-<slug>.md        projects (9)
     ├── data/
     │   ├── headers.ts        the 14 standard headers: slug, file, summary, K&R appendix section
     │   └── nav.ts            URL helpers and sidebar section builders
@@ -187,7 +187,7 @@ Path: `src/content/projects/NN-<slug>.md`. Served at `/projects/<slug>/`.
 | `skills` | string[] | Shown as chips |
 | `platform` | string, default `Any C17 compiler` | e.g. `POSIX (Linux, macOS, BSD, WSL)` |
 
-Projects: wordstat, hexview, life, calc, contacts, kvstore, minishell, huff.
+Projects: wordstat, hexview, life, calc, contacts, kvstore, minishell, huff, mgit.
 
 ---
 

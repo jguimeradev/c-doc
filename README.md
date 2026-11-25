@@ -7,7 +7,7 @@ A rustdoc-style site for C, built with Astro. Two parts:
   original and updated for C99–C23; no text from the book is reproduced.
 - **Exercises** (`src/content/exercises/<chapter-id>.md`): 51 exercises with difficulty,
   hints and solutions, at `/book/<chapter>/exercises/`.
-- **Projects** (`src/content/projects/`): 8 multi-chapter projects with specs, milestones,
+- **Projects** (`src/content/projects/`): 9 multi-chapter projects with specs, milestones,
   starter code, test plans and stretch goals, at `/projects/`.
 - **Playground** (`/playground/`, code in `src/playground/`): compile, run and debug C in
   the browser, with no server involved.
